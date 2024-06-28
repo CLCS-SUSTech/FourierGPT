@@ -26,7 +26,7 @@ Can we quantify these subtle differences?
 
 Our method applies Fourier transform to the relative likelihood scores of texts, which results in a spectrum view that can tell apart model and human responses: as shown in the figure below, GPT-4 has higher power magnitudes (on average) than human near the low frequency area of the spectrum.
 
-![spectrum](images/spectrum_small.png)
+![spectrum](images/spectrum_tiny.png)
 
 FourierGPT is **NOT** a new language model based on GPT. The naming is inspired by the recently proposed zero-shot text detection methods [DetectGPT](https://arxiv.org/abs/2301.11305) and [Fast-DetectGPT](https://arxiv.org/abs/2310.05130).
 
