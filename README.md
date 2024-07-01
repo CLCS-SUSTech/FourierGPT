@@ -96,7 +96,7 @@ This repository is currently under construction. Additional data and code will b
 
 If you find our work useful, you can cite it with:
 ```bibtex
-@article{xu2024detecting
+@article{xu2024detecting,
     title={Detecting Subtle Differences between Human and Model Languages Using Spectrum of Relative Likelihood},
     author={Yang Xu and Yu Wang and Hao An and Zhichen Liu and Yongyuan Li},
     journal={arXiv preprint arXiv:2406.19874},
