@@ -19,7 +19,7 @@ def create_parser():
                         help='output file', required=True)
     parser.add_argument(
         '--model', type=str, default='gpt2',
-        choices=['gpt2', 'gpt2-medium', 'gpt2-large', 'gpt2-xl'],
+        choices=['gpt2', 'gpt2-medium', 'gpt2-large', 'gpt2-xl', 'custom', 'ngram'],
         help=
         'if specified, this model will be used for estimating the entropy \
             (negative log-likelihood output) in replace of the default models'
@@ -39,7 +39,7 @@ def load_model(args):
     if len(args.model_path)>0:
         model_path = args.model_path
         model = GPT2LMHeadModel.from_pretrained(model_path)
-        tokenizer = GPT2Tokenizer(tokenizer_file=os.path.join(model_path, 'tokenizer.json'),
+        tokenizer = GPT2Tokenizer(tokenizer_file=os.path.join(model_path, 'tokenizer.json'), 
                                   vocab_file=os.path.join(model_path, 'vocab.json'),
                                   merges_file=os.path.join(model_path, 'merges.txt'))
     else:
@@ -58,7 +58,7 @@ def load_model(args):
 
 
 @torch.no_grad()
-def process(model, tokenizer, args):
+def run_gpt2_model(model, tokenizer, args):
     device = model.device
     criterian = nn.NLLLoss(reduction='none')
     log_softmax = nn.LogSoftmax(dim=1)
@@ -106,18 +106,18 @@ def process(model, tokenizer, args):
 
 
 @torch.no_grad()
-def process_custom(args):
+def run_custom_model(args):
     """
     For custom models specified in configuration file
     """
     # Load model and data
-    model = Model(args.model_est)
+    model = Model(args.model_path)
     with open(args.input, 'r') as f:
         data = [line.strip() for line in f.readlines()]
     # Compute
     results = []
     for line in tqdm(data):
-        logits, nlls = model.forward(line)
+        _, nlls = model.forward(line)
         results.append(nlls)
     # Write results
     with open(args.output, 'w') as f:
@@ -128,12 +128,20 @@ def process_custom(args):
             f.write(f'{res_str}\n')
 
 
+def run_ngram_model(args):
+    """
+    For ngram models
+    """
+    pass # TODO
+
+
 if __name__ == "__main__":
     parser = create_parser()
     args = parser.parse_args()
-    if args.config is not None:
-        args = load_config(args)
-        process_custom(args)
-    else:
+    if args.model.startswith('gpt2'):
         model, tokenizer = load_model(args)
-        process(model, tokenizer, args)
+        run_gpt2_model(model, tokenizer, args)
+    elif args.model == 'custom':
+        run_custom_model(args)
+    else:
+        run_ngram_model(args)
