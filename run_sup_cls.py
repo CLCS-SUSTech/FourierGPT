@@ -1,6 +1,9 @@
 from run_fft import FFTProcessor
 import numpy as np
 import pandas as pd
+import argparse
+import os
+from typing import Union
 
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import cross_val_score
@@ -70,8 +73,14 @@ def get_circular_mean(input_file: str, require_sid=True):
 
 
 # Features and classification
-def get_features(spectrum_data_file: str, interp_len: int = 500):
-    df = pd.read_csv(spectrum_data_file)
+def get_features(spectrum_data: Union[str, pd.DataFrame], interp_len: int = 500):
+    """
+    """
+    if isinstance(spectrum_data, str):
+        df = pd.read_csv(spectrum_data)
+    else:
+        df = spectrum_data
+
     # If `sid` column does not exist, create it
     if 'sid' not in df.columns:
         df['sdiff']  = df['freq'] < df['freq'].shift(1, fill_value=0)
@@ -89,13 +98,22 @@ def get_features(spectrum_data_file: str, interp_len: int = 500):
     return np.array(features_interp)
 
 
-def run_classification(human_data_file: str, model_data_file: str, classifier: str = 'svm'):
+def run_classification(human_nll_file: str, model_nll_file: str, save_intermid: bool = True):
     """
     Run classification on human and model data
     """
-    x_human = get_features(human_data_file)
+    # circularization
+    human_circularized = get_circular_mean(human_nll_file)
+    model_circularized = get_circular_mean(model_nll_file)
+    if save_intermid:
+        human_output = None
+        model_output = None
+        human_circularized.to_csv('human_circlemean.csv', index=False)
+        model_circularized.to_csv('model_circlemean.csv', index=False)
+
+    x_human = get_features(human_circularized)
     y_human = np.zeros(x_human.shape[0])
-    x_model = get_features(model_data_file)
+    x_model = get_features(model_circularized)
     y_model = np.ones(x_model.shape[0])
 
     x = np.concatenate([x_human, x_model], axis=0)
@@ -106,5 +124,21 @@ def run_classification(human_data_file: str, model_data_file: str, classifier: s
     SVC(gamma='auto', kernel='rbf', C=1))
     scores = cross_val_score(cls, x, y, cv=5)
 
+    return scores
+
+
+def main(args):
+    scores = run_classification(args.human_data_file, args.model_data_file)
     print(f'Cross-validated acc: {scores}')
     print(f'Mean acc: {np.mean(scores)}')
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--human', type=str, required=True, help='Human raw NLL data')
+    parser.add_argument('--model', type=str, required=True, help='Model raw NLL data')
+    
+    args = parser.parse_args()
+    assert os.path.exists(args.human_data_file), f'File {args.human_data_file} does not exist'
+    assert os.path.exists(args.model_data_file), f'File {args.model_data_file} does not exist'
+    main(args)

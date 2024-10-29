@@ -67,6 +67,8 @@ In the paper's experiment, [Mistral-7B-v0.1](https://huggingface.co/mistralai/Mi
 python run_nll.py -i INPUT_TEXT_FILE -o OUTPUT_NLL_FILE --config CONFIG_PATH
 ```
 
+The resulting *raw* likelihood data can be used at **Step 2** to produce *normalized* likelihood scores and the correponding spectrum data, or can be directly used for the supervised learning-based classifier at **Step 3.1**.
+
 ### 2. Normalize likelihood and Fourier transform
 
 Then, compute the normalized likelihood scores and then apply Fourier transform to obtain the spectrum data: 
@@ -78,14 +80,25 @@ python run_fft.py -i INPUT_NLL_FILE -o OUTPUT_FFT_FILE -p zscore --value norm
 - You can specify `-p` for three normalization methods: `zscore`, `logzs`, or `minmax`.
 - `--value` specifies the way for extracting spectrum data. The other two options are: `real` for real part, and `imag` for imaginary part.
 
+The resulting spectrum data will be used as the input for the pair-wise heuristic-based classifier at **Step 3.2**. 
+
 
 ### 3. Run classifiers 
-Finally, take the spectrum data from previous step and perform classification.
+Finally, we take the above generated likelihood or spectrum data as input and perform classification tasks.
 
 #### 3.1 Supervised learning-based classifier
 
-Use the script `run_sup_cls.py`, which runs the following steps:
+Use the script `run_sup_cls.py`, which takes as input two files `HUMAN_NLL_FILE` and `MODEL_NLL_FILE` containing the `raw` likelihood scores (from **Step 1**)
 
+```bash
+python run_sup_cls.py -h HUMAN_NLL_FILE -m MODEL_NLL_FILE
+```
+
+It then runs the following steps:
+
+- Apply circularization: 
+- Extract features:
+- Train and evaluate an SVM classifier, and print performance scores.
 
 #### 3.2 Pairwise heuristic-based classifier
 
