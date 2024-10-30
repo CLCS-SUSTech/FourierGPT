@@ -88,22 +88,50 @@ Finally, we take the above generated likelihood or spectrum data as input and pe
 
 #### 3.1 Supervised learning-based classifier
 
-Use the script `run_sup_cls.py`, which takes as input two files `HUMAN_NLL_FILE` and `MODEL_NLL_FILE` containing the `raw` likelihood scores (from **Step 1**)
+Use the script `run_sup_cls.py`, which takes as input two files `HUMAN_NLL_FILE` and `MODEL_NLL_FILE` containing the `raw` likelihood scores (from **Step 1**), and output classification results.
 
 ```bash
-python run_sup_cls.py -h HUMAN_NLL_FILE -m MODEL_NLL_FILE
+python run_sup_cls.py --human HUMAN_NLL_FILE --model MODEL_NLL_FILE
 ```
 
-It then runs the following steps:
+At the core of this script are two functions: `get_circular_mean` and `run_classification`.
 
-- Apply circularization: 
-- Extract features:
-- Train and evaluate an SVM classifier, and print performance scores.
+`get_circular_mean` goes throughs the following steps:
+
+- *Circularizes* each input raw likelihood sequence, resulting in $$N$$ sequences.
+- Applies a default logarithem *z*-score transformation to each resulted sequence.
+- Applies Fourier transform to  each sequence, and obtain the mean spectrum from teh N spectra.
+
+If `--save_intermid` is set to `True`, then the mean spectrum will be saved to a text file ended with ".circlemean.txt".
+
+`run_classification` calls `get_circular_mean` and uses its output to train and test an SVM classifier:
+
+- The mean spectrum is processed with linear interpolation.  
+- 5-fold cross validation are used for training/testing; the accuracy for each fold the final average accuracy are printed.
+
+For example, with the following command:
+
+```bash
+python run_sup_cls.py --human data/pubmed/pubmed_gpt-4.original.gpt2xl.nll.txt \
+    --model data/pubmed/pubmed_gpt-4.sampled.gpt2xl.nll.txt
+    --save_intermid
+```
+We are expected to see the following output:
+
+```bash
+Cross-validated acc: [0.8        0.78333333 0.8        0.83333333 0.8       ]
+Mean acc: 0.8033333333333335
+```
+
+And the intermidiate results are saved to "data/pubmed/pubmed_gpt-4.original.gpt2xl.nll.circlemean.txt" and "data/pubmed/pubmed_gpt-4.sampled.gpt2xl.nll.circlemean.txt".
 
 #### 3.2 Pairwise heuristic-based classifier
 
-Use the script `run_ph_cls.py`, which runs the following steps:
+Use the script `run_pwh_cls.py`, which (similarly to `run_sup_cls.py`) takes as input two files `HUMAN_NLL_FILE` and `MODEL_NLL_FILE` containing the `raw` likelihood scores (from **Step 1**), and output classification results.:
 
+```bash
+python run_pwh_cls.py --human HUMAN_NLL_FILE --model MODEL_NLL_FILE
+```
 
 For more details, refer to the original Jupyter Notebook files in the [notebook]() folder:
 - `circular.ipynb` conducts circularization operation on likelihood scores.

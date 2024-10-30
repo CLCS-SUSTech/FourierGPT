@@ -72,7 +72,7 @@ def get_circular_mean(input_file: str, require_sid=True):
     return df
 
 
-# Features and classification
+# Extract features by linear interpolation
 def get_features(spectrum_data: Union[str, pd.DataFrame], interp_len: int = 500):
     """
     """
@@ -98,22 +98,25 @@ def get_features(spectrum_data: Union[str, pd.DataFrame], interp_len: int = 500)
     return np.array(features_interp)
 
 
-def run_classification(human_nll_file: str, model_nll_file: str, save_intermid: bool = True):
+# Run classification
+def run_classification(human_nll_file: str, model_nll_file: str, save_intermid: bool = False):
     """
     Run classification on human and model data
     """
     # circularization
-    human_circularized = get_circular_mean(human_nll_file)
-    model_circularized = get_circular_mean(model_nll_file)
+    human_ciclemean = get_circular_mean(human_nll_file)
+    model_circlemean = get_circular_mean(model_nll_file)
     if save_intermid:
-        human_output = None
-        model_output = None
-        human_circularized.to_csv('human_circlemean.csv', index=False)
-        model_circularized.to_csv('model_circlemean.csv', index=False)
+        def get_output_file(nll_file):
+            _dir, _basename = os.path.split(nll_file)
+            _basename, _ext = os.path.splitext(_basename)
+            return os.path.join(_dir, _basename + '.circlemean.txt')
+        human_ciclemean.to_csv(get_output_file(human_nll_file), index=False)
+        model_circlemean.to_csv(get_output_file(model_nll_file), index=False)
 
-    x_human = get_features(human_circularized)
+    x_human = get_features(human_ciclemean)
     y_human = np.zeros(x_human.shape[0])
-    x_model = get_features(model_circularized)
+    x_model = get_features(model_circlemean)
     y_model = np.ones(x_model.shape[0])
 
     x = np.concatenate([x_human, x_model], axis=0)
@@ -128,7 +131,7 @@ def run_classification(human_nll_file: str, model_nll_file: str, save_intermid: 
 
 
 def main(args):
-    scores = run_classification(args.human_data_file, args.model_data_file)
+    scores = run_classification(args.human, args.model, args.save_intermid)
     print(f'Cross-validated acc: {scores}')
     print(f'Mean acc: {np.mean(scores)}')
 
@@ -137,8 +140,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--human', type=str, required=True, help='Human raw NLL data')
     parser.add_argument('--model', type=str, required=True, help='Model raw NLL data')
+    parser.add_argument('--save_intermid', action='store_true', default=False, help='Save intermidiate results')
     
     args = parser.parse_args()
-    assert os.path.exists(args.human_data_file), f'File {args.human_data_file} does not exist'
-    assert os.path.exists(args.model_data_file), f'File {args.model_data_file} does not exist'
+    assert os.path.exists(args.human), f'File {args.human} does not exist'
+    assert os.path.exists(args.model), f'File {args.model} does not exist'
     main(args)
