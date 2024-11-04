@@ -82,6 +82,14 @@ python run_fft.py -i INPUT_NLL_FILE -o OUTPUT_FFT_FILE -p zscore --value norm
 
 The resulting spectrum data will be used as the input for the pair-wise heuristic-based classifier at **Step 3.2**. 
 
+For example, with the following command:
+
+```bash
+python run_fft.py -i data/pubmed/pubmed_gpt-4.original.gpt2xl.nll.txt \
+    -o data/pubmed/pubmed_gpt-4.original.gpt2xl.nllzs.fftnorm.txt -p zscore --value norm
+```
+You can obtain the spectrum of the $z$-scored likelihood in the resulting output file ended with "nllzs.fftnorm.txt".
+
 
 ### 3. Run classifiers 
 Finally, we take the above generated likelihood or spectrum data as input and perform classification tasks.
@@ -116,14 +124,16 @@ python run_sup_cls.py --human data/pubmed/pubmed_gpt-4.original.gpt2xl.nll.txt \
     --model data/pubmed/pubmed_gpt-4.sampled.gpt2xl.nll.txt
     --save_intermid
 ```
-We are expected to see the following output:
+You are expected to see the following output:
 
 ```bash
-Cross-validated acc: [0.8        0.78333333 0.8        0.83333333 0.8       ]
+Cross-validated acc: [0.8 0.78333333 0.8 0.83333333 0.8]
 Mean acc: 0.8033333333333335
 ```
 
 And the intermidiate results are saved to "data/pubmed/pubmed_gpt-4.original.gpt2xl.nll.circlemean.txt" and "data/pubmed/pubmed_gpt-4.sampled.gpt2xl.nll.circlemean.txt".
+
+**Note** that the functions of `run_sup_cls.py` overlap with `run_fft.py` in producing the spectrum data (in "*.fftnorm.txt" files). But since spectrum is just an intermidiate product for Step 3.1, we still keep the two scripts separate. In order to lessen the inter-dependency between the scripts, we encourage you to use `run_fft.py` to obtain the inputs for Step 3.2.
 
 #### 3.2 Pairwise heuristic-based classifier
 
@@ -133,7 +143,48 @@ Use the script `run_pwh_cls.py`, which (similarly to `run_sup_cls.py`) takes as 
 python run_pwh_cls.py --human HUMAN_NLL_FILE --model MODEL_NLL_FILE
 ```
 
-For more details, refer to the original Jupyter Notebook files in the [notebook]() folder:
+For example, with the following command:
+
+```bash
+python run_pwh_cls.py --human data/pubmed/pubmed_gpt-4.original.mistral.nllzs.fftnorm.txt --model data/pubmed/pubmed_gpt-4.sampled.mistral.nllzs.fftnorm.txt
+```
+which output the classification outcome:
+```
+Classifying a single pair of human and model spectrum data
+best_k=3, best_acc=0.9000, higher=model
+```
+where `best_k` is the number of the first `k` frequency components (from low to high) that produces the best accuracy. `higher` indicates whether human or model has higher average power value on the selected frequency components.
+
+The script also provides an option to fully print the classification results over all three datasets (GPT-4, GPT-3.5, and GPT-3), by solely using the `--experiments` flag:
+
+```bash
+python run_pwh_cls.py --experiments
+```
+
+which outputs the following:
+```
+Evaluation for gpt-4
+Genre: pubmed
+   pubmed, mistral, best_k=3, best_acc=0.9000, higher=model
+   pubmed, gpt2xl, best_k=3, best_acc=0.9133, higher=model
+   pubmed, bigram, best_k=12, best_acc=0.6533, higher=human
+Genre: writing
+   writing, mistral, best_k=4, best_acc=0.7667, higher=model
+   writing, gpt2xl, best_k=23, best_acc=0.8467, higher=human
+   writing, bigram, best_k=28, best_acc=0.8800, higher=human
+Genre: xsum
+   xsum, mistral, best_k=48, best_acc=0.6533, higher=human
+   xsum, gpt2xl, best_k=29, best_acc=0.8733, higher=human
+   xsum, bigram, best_k=34, best_acc=0.7667, higher=human
+
+Evaluation for gpt-3.5
+Genre: pubmed
+...
+```
+
+---
+
+We believe the above described scripts are sufficient to reproduce the results in our paper, but if you are interested to see more experimental details, please checkout the original Jupyter Notebook files in the [notebook]() folder:
 - `circular.ipynb` conducts circularization operation on likelihood scores.
 - `classifier_circlemean.ipynb` carries out supervised classification on the circularized output.
 - `classifier_pairwise.ipynb` carries out heuristic-based classification.
