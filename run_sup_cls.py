@@ -12,6 +12,7 @@ from sklearn.feature_selection import SelectKBest
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
+from sklearn.metrics import roc_auc_score
 
 
 # Preprocessing
@@ -124,22 +125,29 @@ def run_classification(human_nll_file: str, model_nll_file: str, save_intermid: 
 
     cls = make_pipeline(StandardScaler(),
                       SelectKBest(k=120),
-    SVC(gamma='auto', kernel='rbf', C=1))
-    scores = cross_val_score(cls, x, y, cv=5)
+    SVC(gamma='auto', kernel='rbf', C=1, probability=True))
+    acc_scores = cross_val_score(cls, x, y, cv=5) # Default scoring metric: accuracy
 
-    return scores
+    # AUROC
+    auroc_scores = cross_val_score(cls, x, y, cv=5, scoring='roc_auc')
+
+    return acc_scores, auroc_scores
 
 
 def main(args):
-    scores = run_classification(args.human, args.model, args.save_intermid)
-    print(f'Cross-validated acc: {scores}')
-    print(f'Mean acc: {np.mean(scores)}')
+    acc_scores, auroc_scores = run_classification(args.human, args.model, args.save_intermid)
+    if args.verbose:
+        print(f'Cross-validated Acc: {acc_scores}')
+        print(f'Cross-validated AUROC: {auroc_scores}')
+    print(f'Mean Acc: {np.mean(acc_scores):.4f}')
+    print(f'Mean AUROC: {np.mean(auroc_scores):.4f}')
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--human', type=str, required=True, help='Human raw NLL data')
     parser.add_argument('--model', type=str, required=True, help='Model raw NLL data')
+    parser.add_argument('--verbose', action='store_true', default=False, help='Print cross-validated results or not (default: False)')
     parser.add_argument('--save_intermid', action='store_true', default=False, help='Save intermidiate results')
     
     args = parser.parse_args()
